@@ -1,4 +1,4 @@
-name: build-system
+name: build-package
 description: Build a Nerves 2 package and prepare its archives and Hex package
 
 inputs:
@@ -54,4 +54,4 @@ runs:
       uses: actions/cache/save@v6
       with:
         path: deploy/system
-        key: nerves2-deploy-system-${{ github.run_id }}
+        key: nerves2-deploy-package-${{ github.run_id }}

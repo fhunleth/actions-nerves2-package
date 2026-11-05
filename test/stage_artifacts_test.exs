@@ -1,5 +1,5 @@
 Mix.start()
-Code.require_file("../build-system/stage_artifacts.exs", __DIR__)
+Code.require_file("../build-package/stage_artifacts.exs", __DIR__)
 ExUnit.start()
 
 defmodule StageArtifactsTest do

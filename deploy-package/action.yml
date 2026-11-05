@@ -1,4 +1,4 @@
-name: deploy-system
+name: deploy-package
 description: Create a draft release with Nerves 2 package archives and their checksum manifest
 
 inputs:
@@ -20,7 +20,7 @@ runs:
       uses: actions/cache/restore@v6
       with:
         path: deploy/system
-        key: nerves2-deploy-system-${{ github.run_id }}
+        key: nerves2-deploy-package-${{ github.run_id }}
         fail-on-cache-miss: true
     - name: Create release notes
       shell: bash

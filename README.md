@@ -18,7 +18,7 @@ for Nerves 2. If your package supports both Nerves 1 and Nerves 2, check
   before building to enable checksum verification by consumers.
 
 `get-br-dependencies` is optional and only applies to Buildroot-based packages.
-`build-system` builds the current Nerves package, generates its checksum manifest,
+`build-package` builds the current Nerves package, generates its checksum manifest,
 and then builds the Hex package. No Nerves 1 compatibility mode is provided.
 
 ## Upgrading from gridpoint-com/actions-nerves-system
@@ -35,27 +35,26 @@ To migrate an existing workflow:
    + uses: fhunleth/actions-nerves2-package@v1
    ```
 
-3. Remove `enable-ccache` and `ccache-initial-setup` from `build-system` inputs;
+3. Rename local action references from `./.actions/build-system` to
+   `./actions/build-package`
+4. Rename local action references from `./.actions/deploy-system` to
+   `./actions/deploy-package`
+5. Remove `enable-ccache` and `ccache-initial-setup` from `build-package` inputs;
    ccache support has been removed. Remove `hex-validate` from
-   `get-br-dependencies` inputs. It remains supported by `build-system`.
-4. Include `"checksum.exs"` in the package's Hex `:files` list and configure
+   `get-br-dependencies` inputs. It remains supported by `build-package`.
+6. Include `"checksum.exs"` in the package's Hex `:files` list and configure
    consumer checksum verification before building. Legacy `:nerves_package`
    configurations use `artifact_checksum: true`; native Nerves 2 packages use
    checksum validators in their build plan. The action now explicitly builds
    artifacts, generates `checksum.exs`, and only then builds the Hex package.
-5. Keep `get-br-dependencies` for Buildroot-based packages. This step is
+7. Keep `get-br-dependencies` for Buildroot-based packages. This step is
    optional now.
-6. Automatic `mix nerves.system.lint` execution has been removed; add an
+8. Automatic `mix nerves.system.lint` execution has been removed; add an
    explicit workflow step if you still need it.
-6. Update any custom artifact-processing steps: the uploaded `system` artifact
+8. Update any custom artifact-processing steps: the uploaded artifact
    now includes `artifacts/`, `checksum.exs`, `CHANGELOG.md`, and
    `hex/package.tar` (unless `hex-validate` is false). Draft releases include
    the package archives and `checksum.exs`; Hex publishing remains separate.
-
-The local action paths `./.actions/build-system` and
-`./.actions/deploy-system`, and the uploaded artifact name `system`, are
-unchanged. Despite these names, they work with Nerves packages that do not use
-Buildroot.
 
 ## Example
 
@@ -92,20 +91,20 @@ jobs:
           download-site-bucket-uri: ${{ vars.S3_BUCKET }}
           aws-role: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ vars.AWS_REGION }}
-  build-system:
+  build-package:
     needs: [get-br-dependencies]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: fhunleth/actions-nerves2-package@v1
       - name: Build Nerves package
-        uses: ./.actions/build-system
+        uses: ./.actions/build-package
         with:
           otp-version: ${{ env.OTP_VERSION }}
           elixir-version: ${{ env.ELIXIR_VERSION }}
           nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
-  deploy-system:
-    needs: [build-system]
+  deploy-package:
+    needs: [build-package]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     permissions:
@@ -114,7 +113,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: fhunleth/actions-nerves2-package@v1
       - name: Deploy Nerves package
-        uses: ./.actions/deploy-system
+        uses: ./.actions/deploy-package
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -240,12 +239,12 @@ And you will need to set the following in the `./.actions/get-br-dependencies` a
   * [use iam roles to connect github actions to actions in aws](https://aws.amazon.com/blogs/security/use-iam-roles-to-connect-github-actions-to-actions-in-aws/)
   * [configuring openid connect in amazone web services](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services)
 
-### build-system
+### build-package
 
 ```yaml
       - uses: fhunleth/actions-nerves2-package@v1
       - name: Build Nerves package
-        uses: ./.actions/build-system
+        uses: ./.actions/build-package
         with:
           # OTP, Elixir and nerves_bootstrap versions to use.
           # These are required
@@ -276,13 +275,13 @@ The checksum task covers only archives in the active build plan and replaces
 the manifest. Packages with host-specific archives need an additional
 aggregation step before Hex packaging to publish a manifest for multiple hosts.
 
-### deploy-system
+### deploy-package
 
-The `./.actions/deploy-system` action should only be run after a job running the `./.actions/build-system` action and only on a pushed tag.
+The `./.actions/deploy-package` action should only be run after a job running the `./.actions/build-package` action and only on a pushed tag.
 
 ```yaml
-  deploy-system:
-    needs: [build-system]
+  deploy-package:
+    needs: [build-package]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     permissions:
@@ -291,7 +290,7 @@ The `./.actions/deploy-system` action should only be run after a job running the
       - uses: actions/checkout@v7
       - uses: fhunleth/actions-nerves2-package@v1
       - name: Deploy Nerves package
-        uses: ./.actions/deploy-system
+        uses: ./.actions/deploy-package
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -317,7 +316,7 @@ To create a release for your Nerves package:
   - Add a tag to this commit named after the version that *includes* the leading
     `v` (`v1.0.0`).
   - Push the commit and tag to the git remote (GitHub).
-  - The `deploy-system` job will run when the tag is pushed. It will create a
+  - The `deploy-package` job will run when the tag is pushed. It will create a
     `v<VERSION>` draft release with the `CHANGELOG.md` notes and compiled Nerves
     package artifacts and `checksum.exs`. Hex publishing remains a separate step.
   - Review the draft release in GitHub, change the name, and publish the
