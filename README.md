@@ -1,6 +1,25 @@
-# actions-nerves-system
+# fhunleth/actions-nerves2-system
 
-A collection of github actions for building and deploying Nerves systems.
+A collection of GitHub actions for building and deploying Nerves 2 systems.
+
+This is a fork of
+[gridpoint-com/actions-nerves-system](https://github.com/gridpoint-com/actions-nerves-system)
+for Nerves 2. If your system supports both Nerves 1 and Nerves 2, then check the
+lock file for determining which actions is appropriate.
+
+## Requirements
+
+- A Linux runner with Docker, `script`, and `stty` available. Standard GitHub
+  Ubuntu runners provide these tools.
+- Erlang/OTP, Elixir, and `nerves_bootstrap` versions supported by the selected
+  Nerves 2 release.
+- Include `"checksum.exs"` in the system's Hex package `:files`. For a legacy
+  `:nerves_package` system, set `artifact_checksum: true` before building to
+  enable checksum verification by consumers.
+
+`get-br-dependencies` is optional and only applies to Buildroot-based systems.
+`build-system` builds the current Nerves package, generates its checksum manifest,
+and then builds the Hex package. No Nerves 1 compatibility mode is provided.
 
 ## Example
 
@@ -10,9 +29,9 @@ The following example shows how to build a system and deploy.
 on: [push]
 
 env:
-  OTP_VERSION: 26.2.1
-  ELIXIR_VERSION: 1.16.2-otp-26
-  NERVES_BOOTSTRAP_VERSION: 1.12.1
+  OTP_VERSION: 29.1.2
+  ELIXIR_VERSION: 1.20.5-otp-29
+  NERVES_BOOTSTRAP_VERSION: 1.17.4
 
 permissions:
   id-token: write
@@ -20,10 +39,10 @@ permissions:
 
 jobs:
   get-br-dependencies:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: gridpoint-com/actions-nerves-system@v1
+      - uses: actions/checkout@v7
+      - uses: fhunleth/actions-nerves2-system@v1
       - name: Get Buildroot Dependencies
         uses: ./.actions/get-br-dependencies
         with:
@@ -37,10 +56,10 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
   build-system:
     needs: [get-br-dependencies]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: gridpoint-com/actions-nerves-system@v1
+      - uses: actions/checkout@v7
+      - uses: fhunleth/actions-nerves2-system@v1
       - name: Build nerves_system
         uses: ./.actions/build-system
         with:
@@ -50,12 +69,12 @@ jobs:
   deploy-system:
     needs: [build-system]
     if: github.ref_type == 'tag'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: gridpoint-com/actions-nerves-system@v1
+      - uses: actions/checkout@v7
+      - uses: fhunleth/actions-nerves2-system@v1
       - name: Deploy nerves_system
         uses: ./.actions/deploy-system
         with:
@@ -70,26 +89,22 @@ to be used within the job.
 
 ```yaml
     steps:
-      - uses: actions/checkout@v4
-      - uses: gridpoint-com/actions-nerves-system@v1
+      - uses: actions/checkout@v7
+      - uses: fhunleth/actions-nerves2-system@v1
 ```
 
 ### get-br-dependencies
 
 ```yaml
-      - uses: gridpoint-com/actions-nerves-system@v1
+      - uses: fhunleth/actions-nerves2-system@v1
       - name: Get Buildroot Dependencies
         uses: ./.actions/get-br-dependencies
         with:
-          # OPT, Elixir and nerves_bootstrap versions to use.
+          # OTP, Elixir and nerves_bootstrap versions to use.
           # These are required
           otp-version: ${{ env.OTP_VERSION }}
           elixir-version: ${{ env.ELIXIR_VERSION }}
           nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
-
-          # Validate hex package.
-          # Default: true
-          hex-validate: true
 
           # Cache the packages downloaded by Buildroot (`~/.nerves/dl`)
           # Default: true
@@ -116,7 +131,7 @@ to be used within the job.
 
 By default the packages downloaded by Buildroot (`~/.nerves/dl`), are cached
 for use in other steps. If you would like to disable saving this cache, set
-`save-dl-cache: false` in the `build-tools/get-br-dependencies` job for your
+`save-dl-cache: false` in the `get-br-dependencies` job for your
 Nerves system's CI workflow.
 
 #### Package download sites
@@ -190,28 +205,38 @@ And you will need to set the following in the `./.actions/get-br-dependencies` a
 ### build-system
 
 ```yaml
-      - uses: gridpoint-com/actions-nerves-system@v1
+      - uses: fhunleth/actions-nerves2-system@v1
       - name: Build nerves_system
         uses: ./.actions/build-system
         with:
-          # OPT, Elixir and nerves_bootstrap versions to use.
+          # OTP, Elixir and nerves_bootstrap versions to use.
           # These are required
           otp-version: ${{ env.OTP_VERSION }}
           elixir-version: ${{ env.ELIXIR_VERSION }}
           nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
 
-          # Validate hex package.
+          # Validate and save the Hex package after checksum generation.
           # Default: true
           hex-validate: true
-
-          # Enable ccache to speed up build time
-          # Enabled by default
-          enable-ccache: true
-
-          # Initial ccache settings to apply.
-          # Default: '--max-size=1G'
-          ccache-initial-setup: '--max-size=1G'
 ```
+
+The uploaded Actions artifact named `system` contains:
+
+```text
+artifacts/       Selected package's archives and any configured sidecars
+checksum.exs    Generated archive checksums
+CHANGELOG.md    Release notes source
+hex/package.tar Hex package, unless hex-validate is false
+```
+
+These files are also cached for the deployment job in the same workflow run.
+The Hex package includes the generated manifest when
+`"checksum.exs"` is listed in the project's package files. Download the `system`
+Actions artifact to retain the Hex package for publishing.
+
+The checksum task covers only archives in the active build plan and replaces
+the manifest. Packages with host-specific archives need an additional
+aggregation step before Hex packaging to publish a manifest for multiple hosts.
 
 ### deploy-system
 
@@ -221,12 +246,12 @@ The `./.actions/deploy-system` action should only be run after a job running the
   deploy-system:
     needs: [build-system]
     if: github.ref_type == 'tag'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: gridpoint-com/actions-nerves-system@v1
+      - uses: actions/checkout@v7
+      - uses: fhunleth/actions-nerves2-system@v1
       - name: Deploy nerves_system
         uses: ./.actions/deploy-system
         with:
@@ -241,7 +266,7 @@ The `./.actions/deploy-system` action should only be run after a job running the
 >
 > See docs for more info:
 > * https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/using-github-cli-in-workflows
-> * https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/controlling-permissions-for-github_token 
+> * https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/controlling-permissions-for-github_token
 
 ### Creating a release
 
@@ -256,6 +281,14 @@ To create a release for your custom Nerves system:
   - Push the commit and tag to the git remote (GitHub).
   - The `deploy-system` job will run when the tag is pushed. It will create a
     `v<VERSION>` draft release with the `CHANGELOG.md` notes and compiled Nerves
-    system artifact.
+    system artifacts and `checksum.exs`. Hex publishing remains a separate step.
   - Review the draft release in GitHub, change the name, and publish the
     release.
+
+## Testing
+
+Run the artifact-staging tests with:
+
+```sh
+elixir test/stage_artifacts_test.exs
+```

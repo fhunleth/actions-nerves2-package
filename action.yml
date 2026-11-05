@@ -1,5 +1,5 @@
-name: actions-nerves-system
-description: Setup symlink to github actions useful for building nerves-systems
+name: actions-nerves2-system
+description: Setup actions for building and deploying Nerves 2 systems
 
 runs:
   using: composite
@@ -7,4 +7,4 @@ runs:
     - name: Setup .actions link
       shell: bash
       run: |
-        ln -s ${GITHUB_ACTION_PATH} .actions
+        ln -s "${GITHUB_ACTION_PATH}" .actions

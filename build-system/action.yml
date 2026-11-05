@@ -1,23 +1,20 @@
 name: build-system
+description: Build a Nerves 2 system and prepare its archives and Hex package
 
 inputs:
   otp-version:
     required: true
+    description: Set OTP version to use
   elixir-version:
     required: true
+    description: Set Elixir version to use
   nerves-bootstrap-version:
     required: true
+    description: Set nerves_bootstrap version to use
   hex-validate:
     required: false
-    type: boolean
-    default: true
-  enable-ccache:
-    required: false
-    type: boolean
-    default: true
-  ccache-initial-setup:
-    required: false
-    default: --max-size=1G
+    description: Validate and save the Hex package after generating checksums
+    default: 'true'
 
 runs:
   using: composite
@@ -29,26 +26,11 @@ runs:
         nerves-bootstrap-version: ${{ inputs.nerves-bootstrap-version }}
     - uses: ./.actions/.internal/restore-nerves-downloads
     - uses: ./.actions/.internal/mix-deps-get
-    - name: Validate Hex package
-      if: inputs.hex-validate == 'true'
-      shell: bash
-      run: mix hex.build
-    - name: Restore ccache
-      if: inputs.enable-ccache == 'true'
-      uses: ./.actions/.internal/cache-buildroot-ccache
     - name: Build
       shell: bash
-      run: |
-        if [[ "${{ inputs.enable-ccache }}" = "true" ]]; then
-          export BR2_CCACHE=y
-          export BR2_CCACHE_DIR=~/.buildroot-ccache
-          export BR2_CCACHE_INITIAL_SETUP="${{ inputs.ccache-initial-setup }}"
-        fi
-        mix compile
-    - name: Did I really build
-      shell: bash
-      run: |
-        [ -d .nerves ] || (echo "VERSION file needs to be bumped or a config file needs to change to force a build"; exit 1)
+      env:
+        NERVES_CONTAINER_TOOL: docker
+      run: script -e -c 'mix nerves.artifact.build' -q /dev/null
     - name: Lint
       shell: bash
       run: |
@@ -57,19 +39,27 @@ runs:
         else
           echo "nerves.system.lint command not available, skipping lint step"
         fi
-    - name: Create artifacts
+    - name: Generate artifact checksums
+      shell: bash
+      run: mix nerves.artifact.checksum
+    - name: Stage artifacts
       shell: bash
       run: |
-        mkdir -p deploy/system/artifacts
-        cp ./CHANGELOG.md deploy/system/CHANGELOG.md
-        mix nerves.artifact ${GITHUB_REPOSITORY#*/} --path deploy/system/artifacts
+        elixir -r "${GITHUB_ACTION_PATH}/stage_artifacts.exs" -S mix nerves.action.stage
+    - name: Validate and save Hex package
+      if: inputs.hex-validate == 'true'
+      shell: bash
+      run: |
+        mkdir -p deploy/system/hex
+        mix hex.build --output deploy/system/hex/package.tar
     - name: Store artifacts
       uses: actions/upload-artifact@v7
       with:
-        path: deploy/system/artifacts
+        path: deploy/system
         name: system
+        if-no-files-found: error
     - name: Save deploy cache
       uses: actions/cache/save@v6
       with:
         path: deploy/system
-        key: deploy/system-${{ github.sha }}-${{ github.ref_name }}
+        key: nerves2-deploy-system-${{ github.run_id }}
