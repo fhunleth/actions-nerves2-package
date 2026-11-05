@@ -1,5 +1,5 @@
-name: actions-nerves2-system
-description: Setup actions for building and deploying Nerves 2 systems
+name: actions-nerves2-package
+description: Setup actions for building and deploying Nerves 2 packages
 
 runs:
   using: composite

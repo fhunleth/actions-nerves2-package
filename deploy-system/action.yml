@@ -1,5 +1,5 @@
 name: deploy-system
-description: Create a draft release with Nerves 2 archives and their checksum manifest
+description: Create a draft release with Nerves 2 package archives and their checksum manifest
 
 inputs:
   github-token:

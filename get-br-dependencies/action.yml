@@ -1,5 +1,5 @@
 name: get-br-dependencies
-description: Get Buildroot source dependencies for Nerves 2 systems
+description: Get Buildroot source dependencies for Nerves 2 packages
 
 inputs:
   otp-version:

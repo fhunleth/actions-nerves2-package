@@ -1,11 +1,11 @@
-# fhunleth/actions-nerves2-system
+# fhunleth/actions-nerves2-package
 
-A collection of GitHub actions for building and deploying Nerves 2 systems.
+A collection of GitHub actions for building and deploying Nerves 2 packages.
 
 This is a fork of
 [gridpoint-com/actions-nerves-system](https://github.com/gridpoint-com/actions-nerves-system)
-for Nerves 2. If your system supports both Nerves 1 and Nerves 2, then check the
-lock file for determining which actions is appropriate.
+for Nerves 2. If your package supports both Nerves 1 and Nerves 2, check
+`mix.lock` to determine which action is appropriate.
 
 ## Requirements
 
@@ -13,17 +13,55 @@ lock file for determining which actions is appropriate.
   Ubuntu runners provide these tools.
 - Erlang/OTP, Elixir, and `nerves_bootstrap` versions supported by the selected
   Nerves 2 release.
-- Include `"checksum.exs"` in the system's Hex package `:files`. For a legacy
-  `:nerves_package` system, set `artifact_checksum: true` before building to
-  enable checksum verification by consumers.
+- Include `"checksum.exs"` in the package's Hex `:files` list. For a package using
+  the legacy `:nerves_package` configuration, set `artifact_checksum: true`
+  before building to enable checksum verification by consumers.
 
-`get-br-dependencies` is optional and only applies to Buildroot-based systems.
+`get-br-dependencies` is optional and only applies to Buildroot-based packages.
 `build-system` builds the current Nerves package, generates its checksum manifest,
 and then builds the Hex package. No Nerves 1 compatibility mode is provided.
 
+## Upgrading from gridpoint-com/actions-nerves-system
+
+This is a separate action for Nerves 2, not a drop-in replacement for Nerves 1.
+To migrate an existing workflow:
+
+1. Update the package to Nerves 2 and select compatible Erlang/OTP, Elixir, and
+   `nerves_bootstrap` versions.
+2. Replace the setup action in every job:
+
+   ```diff
+   - uses: gridpoint-com/actions-nerves-system@v1
+   + uses: fhunleth/actions-nerves2-package@v1
+   ```
+
+3. Remove `enable-ccache` and `ccache-initial-setup` from `build-system` inputs;
+   ccache support has been removed. Remove `hex-validate` from
+   `get-br-dependencies` inputs. It remains supported by `build-system`.
+4. Include `"checksum.exs"` in the package's Hex `:files` list and configure
+   consumer checksum verification before building. Legacy `:nerves_package`
+   configurations use `artifact_checksum: true`; native Nerves 2 packages use
+   checksum validators in their build plan. The action now explicitly builds
+   artifacts, generates `checksum.exs`, and only then builds the Hex package.
+5. Keep `get-br-dependencies` for Buildroot-based packages. This step is
+   optional now.
+6. Automatic `mix nerves.system.lint` execution has been removed; add an
+   explicit workflow step if you still need it.
+6. Update any custom artifact-processing steps: the uploaded `system` artifact
+   now includes `artifacts/`, `checksum.exs`, `CHANGELOG.md`, and
+   `hex/package.tar` (unless `hex-validate` is false). Draft releases include
+   the package archives and `checksum.exs`; Hex publishing remains separate.
+
+The local action paths `./.actions/build-system` and
+`./.actions/deploy-system`, and the uploaded artifact name `system`, are
+unchanged. Despite these names, they work with Nerves packages that do not use
+Buildroot.
+
 ## Example
 
-The following example shows how to build a system and deploy.
+The following example shows how to build and deploy a Buildroot-based Nerves
+package. For other packages, omit the `get-br-dependencies` job and remove
+`needs: [get-br-dependencies]` from the build job.
 
 ```yaml
 on: [push]
@@ -42,7 +80,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-system@v1
+      - uses: fhunleth/actions-nerves2-package@v1
       - name: Get Buildroot Dependencies
         uses: ./.actions/get-br-dependencies
         with:
@@ -59,8 +97,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-system@v1
-      - name: Build nerves_system
+      - uses: fhunleth/actions-nerves2-package@v1
+      - name: Build Nerves package
         uses: ./.actions/build-system
         with:
           otp-version: ${{ env.OTP_VERSION }}
@@ -74,8 +112,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-system@v1
-      - name: Deploy nerves_system
+      - uses: fhunleth/actions-nerves2-package@v1
+      - name: Deploy Nerves package
         uses: ./.actions/deploy-system
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -90,13 +128,13 @@ to be used within the job.
 ```yaml
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-system@v1
+      - uses: fhunleth/actions-nerves2-package@v1
 ```
 
 ### get-br-dependencies
 
 ```yaml
-      - uses: fhunleth/actions-nerves2-system@v1
+      - uses: fhunleth/actions-nerves2-package@v1
       - name: Get Buildroot Dependencies
         uses: ./.actions/get-br-dependencies
         with:
@@ -132,13 +170,13 @@ to be used within the job.
 By default the packages downloaded by Buildroot (`~/.nerves/dl`), are cached
 for use in other steps. If you would like to disable saving this cache, set
 `save-dl-cache: false` in the `get-br-dependencies` job for your
-Nerves system's CI workflow.
+Nerves package's CI workflow.
 
 #### Package download sites
 
-System builds download software packages from many sites on the Internet. In
-order to mitigate download failures from sites going offline, package URLs
-changing, slow downloads, etc, Buildroot supports primary and backup download
+Buildroot-based Nerves packages download software from many sites on the
+Internet. In order to mitigate download failures from sites going offline,
+package URLs changing, slow downloads, etc, Buildroot supports primary and backup download
 sites. The Buildroot project maintains the default backup download site.
 Nerves-specific packages are not on the Buildroot site. Keeping an archive of
 all downloaded packages is important to ensure that your project can be built
@@ -193,9 +231,9 @@ And you will need to set the following in the `./.actions/get-br-dependencies` a
 
 - In the AWS dashboard, create an AWS role that CI will use to access the S3 bucket.
 
-- If you would like your Nerves system to pull packages from the download site
+- If you would like your Nerves package to pull sources from the download site
   when building outside of CI, set the Buildroot primary site in your Nerves
-  system `nerves_defconfig` file to the S3 bucket URL:
+  package's `nerves_defconfig` file to the S3 bucket URL:
   `BR2_PRIMARY_SITE="https://<bucket-name>.s3.amazonaws.com"`
 
 - For more details, reference the following documents:
@@ -205,8 +243,8 @@ And you will need to set the following in the `./.actions/get-br-dependencies` a
 ### build-system
 
 ```yaml
-      - uses: fhunleth/actions-nerves2-system@v1
-      - name: Build nerves_system
+      - uses: fhunleth/actions-nerves2-package@v1
+      - name: Build Nerves package
         uses: ./.actions/build-system
         with:
           # OTP, Elixir and nerves_bootstrap versions to use.
@@ -251,8 +289,8 @@ The `./.actions/deploy-system` action should only be run after a job running the
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-system@v1
-      - name: Deploy nerves_system
+      - uses: fhunleth/actions-nerves2-package@v1
+      - name: Deploy Nerves package
         uses: ./.actions/deploy-system
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -270,9 +308,9 @@ The `./.actions/deploy-system` action should only be run after a job running the
 
 ### Creating a release
 
-To create a release for your custom Nerves system:
-  - Update the system's `VERSION` file with the version number for the release,
-    *without* a leading `v` (`1.0.0`).
+To create a release for your Nerves package:
+  - Update the package's version in `mix.exs`, or its `VERSION` file if it uses
+    one, *without* a leading `v` (`1.0.0`).
   - Update `CHANGELOG.md`, ensuring to create a header with the version number
     that *includes* the leading `v` (`## v1.0.0`).
   - Commit these changes.
@@ -281,7 +319,7 @@ To create a release for your custom Nerves system:
   - Push the commit and tag to the git remote (GitHub).
   - The `deploy-system` job will run when the tag is pushed. It will create a
     `v<VERSION>` draft release with the `CHANGELOG.md` notes and compiled Nerves
-    system artifacts and `checksum.exs`. Hex publishing remains a separate step.
+    package artifacts and `checksum.exs`. Hex publishing remains a separate step.
   - Review the draft release in GitHub, change the name, and publish the
     release.
 

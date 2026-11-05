@@ -1,5 +1,5 @@
 name: build-system
-description: Build a Nerves 2 system and prepare its archives and Hex package
+description: Build a Nerves 2 package and prepare its archives and Hex package
 
 inputs:
   otp-version:
