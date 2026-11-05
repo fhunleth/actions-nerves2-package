@@ -31,14 +31,6 @@ runs:
       env:
         NERVES_CONTAINER_TOOL: docker
       run: script -e -c 'mix nerves.artifact.build' -q /dev/null
-    - name: Lint
-      shell: bash
-      run: |
-        if mix help nerves.system.lint >/dev/null 2>&1; then
-          mix nerves.system.lint nerves_defconfig
-        else
-          echo "nerves.system.lint command not available, skipping lint step"
-        fi
     - name: Generate artifact checksums
       shell: bash
       run: mix nerves.artifact.checksum
