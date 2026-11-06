@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.1
+
+Changes:
+
+- Process logs so that GHA website results are easier to view on error
+
 ## v0.1.0
 
 Initial release of `fhunleth/actions-nerves2-package`, a Nerves 2-only fork of
