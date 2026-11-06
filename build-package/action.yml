@@ -30,20 +30,26 @@ runs:
       shell: bash
       env:
         NERVES_CONTAINER_TOOL: docker
-      run: script -e -c 'mix nerves.artifact.build' -q /dev/null
+      run: |
+        bash "${GITHUB_ACTION_PATH}/run_logged.sh" artifact-build \
+          script -e -c 'mix nerves.artifact.build' -q /dev/null
     - name: Generate artifact checksums
       shell: bash
-      run: mix nerves.artifact.checksum
+      run: |
+        bash "${GITHUB_ACTION_PATH}/run_logged.sh" artifact-checksum \
+          mix nerves.artifact.checksum
     - name: Stage artifacts
       shell: bash
       run: |
-        elixir -r "${GITHUB_ACTION_PATH}/stage_artifacts.exs" -S mix nerves.action.stage
+        bash "${GITHUB_ACTION_PATH}/run_logged.sh" artifact-staging \
+          elixir -r "${GITHUB_ACTION_PATH}/stage_artifacts.exs" -S mix nerves.action.stage
     - name: Validate and save Hex package
       if: inputs.hex-validate == 'true'
       shell: bash
       run: |
         mkdir -p deploy/system/hex
-        mix hex.build --output deploy/system/hex/package.tar
+        bash "${GITHUB_ACTION_PATH}/run_logged.sh" hex-build \
+          mix hex.build --output deploy/system/hex/package.tar
     - name: Store artifacts
       uses: actions/upload-artifact@v7
       with:
@@ -55,3 +61,10 @@ runs:
       with:
         path: deploy/system
         key: nerves2-deploy-package-${{ github.run_id }}
+    - name: Upload command logs
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        path: ${{ runner.temp }}/nerves-package-logs
+        name: nerves-package-logs
+        if-no-files-found: ignore

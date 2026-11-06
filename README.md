@@ -275,6 +275,19 @@ The checksum task covers only archives in the active build plan and replaces
 the manifest. Packages with host-specific archives need an additional
 aggregation step before Hex packaging to publish a manifest for multiple hosts.
 
+#### Build logs and failures
+
+Build, checksum, artifact-staging, and Hex-packaging output is captured in
+separate files rather than streamed into the workflow log. The
+`nerves-package-logs` artifact retains the full output, including after a
+failure or cancellation when the runner can still upload artifacts.
+
+Failed commands retain their exit status and print their last output in the
+workflow log and on the run's summary page. This excerpt is limited to 100
+lines and 16 KiB so a noisy build cannot hide a later packaging failure.
+
+Log artifacts contain raw command output; avoid printing secrets.
+
 ### deploy-package
 
 The `./.actions/deploy-package` action should only be run after a job running the `./.actions/build-package` action and only on a pushed tag.
@@ -324,8 +337,8 @@ To create a release for your Nerves package:
 
 ## Testing
 
-Run the artifact-staging tests with:
+Run the artifact-staging and command-logging tests with:
 
 ```sh
-elixir test/stage_artifacts_test.exs
+elixir -r 'test/*_test.exs' -e ''
 ```
