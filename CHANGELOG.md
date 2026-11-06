@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.2
+
+Changes:
+
+- Continue to stream build output for everything but the long artifact build
+  step. This adjusts the v0.1.1 change to be friendlier for website only review
+  of CI failures.
+
 ## v0.1.1
 
 Changes:
