@@ -277,14 +277,16 @@ aggregation step before Hex packaging to publish a manifest for multiple hosts.
 
 #### Build logs and failures
 
-Build, checksum, artifact-staging, and Hex-packaging output is captured in
-separate files rather than streamed into the workflow log. The
-`nerves-package-logs` artifact retains the full output, including after a
-failure or cancellation when the runner can still upload artifacts.
+Only the lengthy artifact-build output is hidden from the workflow log.
+Checksum, artifact-staging, and Hex-packaging output is streamed to the
+workflow log as usual. All four commands also save their full output in the
+`nerves-package-logs` artifact, including after a failure or cancellation when
+the runner can still upload artifacts.
 
-Failed commands retain their exit status and print their last output in the
-workflow log and on the run's summary page. This excerpt is limited to 100
-lines and 16 KiB so a noisy build cannot hide a later packaging failure.
+Failed commands retain their exit status and show their last output on the
+run's summary page. Artifact-build failures also print that excerpt in the
+workflow log. Excerpts are limited to 100 lines and 16 KiB so a noisy build
+cannot hide a later packaging failure.
 
 Log artifacts contain raw command output; avoid printing secrets.
 
