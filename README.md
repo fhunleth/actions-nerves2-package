@@ -39,9 +39,8 @@ To migrate an existing workflow:
    `./actions/build-package`
 4. Rename local action references from `./.actions/deploy-system` to
    `./actions/deploy-package`
-5. Remove `enable-ccache` and `ccache-initial-setup` from `build-package` inputs;
-   ccache support has been removed. Remove `hex-validate` from
-   `get-br-dependencies` inputs. It remains supported by `build-package`.
+5. Remove `hex-validate` from `get-br-dependencies` inputs. It remains supported
+   by `build-package`.
 6. Include `"checksum.exs"` in the package's Hex `:files` list and configure
    consumer checksum verification before building. Legacy `:nerves_package`
    configurations use `artifact_checksum: true`; native Nerves 2 packages use
@@ -51,7 +50,7 @@ To migrate an existing workflow:
    optional now.
 8. Automatic `mix nerves.system.lint` execution has been removed; add an
    explicit workflow step if you still need it.
-8. Update any custom artifact-processing steps: the uploaded artifact
+9. Update any custom artifact-processing steps: the uploaded artifact
    now includes `artifacts/`, `checksum.exs`, `CHANGELOG.md`, and
    `hex/package.tar` (unless `hex-validate` is false). Draft releases include
    the package archives and `checksum.exs`; Hex publishing remains separate.
@@ -274,6 +273,21 @@ Actions artifact to retain the Hex package for publishing.
 The checksum task covers only archives in the active build plan and replaces
 the manifest. Packages with host-specific archives need an additional
 aggregation step before Hex packaging to publish a manifest for multiple hosts.
+
+#### Compiler cache
+
+Set `enable-ccache: true` on `build-package` to restore and save the compiler
+cache between successful workflow runs. This requires a Nerves version that
+supports `NERVES_CCACHE_DIR`; older Nerves versions do not mount the cache.
+
+Nerves mounts the cache inside the build container and sets `CCACHE_DIR`.
+Buildroot-based packages automatically enable ccache. Other packages must
+install and invoke ccache in their container build scripts.
+
+`ccache-initial-setup` defaults to `--max-size=1G` and controls Buildroot's initial
+ccache setup. Cache keys separate repositories, runner architectures, and
+`mix.lock`/`nerves_defconfig` configurations. Ccache also checks compiler and
+source inputs. Compiler caching is disabled by default.
 
 #### Build logs and failures
 

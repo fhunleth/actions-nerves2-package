@@ -15,6 +15,14 @@ inputs:
     required: false
     description: Validate and save the Hex package after generating checksums
     default: 'true'
+  enable-ccache:
+    required: false
+    description: Persist compiler cache (requires Nerves with NERVES_CCACHE_DIR support)
+    default: 'false'
+  ccache-initial-setup:
+    required: false
+    description: Initial ccache options for Buildroot packages
+    default: '--max-size=1G'
 
 runs:
   using: composite
@@ -26,11 +34,25 @@ runs:
         nerves-bootstrap-version: ${{ inputs.nerves-bootstrap-version }}
     - uses: ./.actions/.internal/restore-nerves-downloads
     - uses: ./.actions/.internal/mix-deps-get
+    - name: Restore compiler cache
+      if: inputs.enable-ccache == 'true'
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ runner.temp }}/nerves-ccache
+        key: nerves2-ccache-${{ runner.os }}-${{ runner.arch }}-${{ github.repository_id }}-${{ hashFiles('mix.lock', 'nerves_defconfig') }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          nerves2-ccache-${{ runner.os }}-${{ runner.arch }}-${{ github.repository_id }}-${{ hashFiles('mix.lock', 'nerves_defconfig') }}-
     - name: Build
       shell: bash
       env:
         NERVES_CONTAINER_TOOL: docker
+        ENABLE_CCACHE: ${{ inputs.enable-ccache }}
+        CCACHE_INITIAL_SETUP: ${{ inputs.ccache-initial-setup }}
       run: |
+        if [[ "$ENABLE_CCACHE" == "true" ]]; then
+          export NERVES_CCACHE_DIR="${RUNNER_TEMP}/nerves-ccache"
+          export NERVES_CCACHE_INITIAL_SETUP="$CCACHE_INITIAL_SETUP"
+        fi
         bash "${GITHUB_ACTION_PATH}/run_logged.sh" artifact-build \
           script -e -c 'mix nerves.artifact.build' -q /dev/null
     - name: Generate artifact checksums
@@ -68,3 +90,9 @@ runs:
         path: ${{ runner.temp }}/nerves-package-logs
         name: nerves-package-logs
         if-no-files-found: ignore
+    - name: Save compiler cache
+      if: success() && inputs.enable-ccache == 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ runner.temp }}/nerves-ccache
+        key: nerves2-ccache-${{ runner.os }}-${{ runner.arch }}-${{ github.repository_id }}-${{ hashFiles('mix.lock', 'nerves_defconfig') }}-${{ github.run_id }}-${{ github.run_attempt }}
