@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3
+
+Changes:
+
+- Support `:enable-ccache` again
+
 ## v0.1.2
 
 Changes:
