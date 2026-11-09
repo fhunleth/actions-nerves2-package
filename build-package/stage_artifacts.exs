@@ -9,11 +9,11 @@ defmodule Mix.Tasks.Nerves.Action.Stage do
   @impl Mix.Task
   def run([]) do
     package = Nerves.MixUtils.select_package!(Nerves.build_plan(), [])
-    stage(package, "deploy/system")
+    stage(package, "deploy/system", System.fetch_env!("GITHUB_OUTPUT"))
   end
 
   @doc false
-  def stage(package, destination) do
+  def stage(package, destination, output_path \\ nil) do
     if package.downloads == [] do
       Mix.raise("No artifact outputs found for #{package.app}")
     end
@@ -27,6 +27,10 @@ defmodule Mix.Tasks.Nerves.Action.Stage do
 
     for filename <- ["checksum.exs", "CHANGELOG.md"] do
       File.cp!(Path.join(package.path, filename), Path.join(destination, filename))
+    end
+
+    if output_path do
+      File.write!(output_path, "package-name=#{package.app}\n", [:append])
     end
 
     :ok

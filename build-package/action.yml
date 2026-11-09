@@ -68,6 +68,7 @@ runs:
         bash "${GITHUB_ACTION_PATH}/run_logged.sh" artifact-checksum \
           mix nerves.artifact.checksum
     - name: Stage artifacts
+      id: stage-artifacts
       shell: bash
       run: |
         bash "${GITHUB_ACTION_PATH}/run_logged.sh" artifact-staging \
@@ -83,7 +84,7 @@ runs:
       uses: actions/upload-artifact@v7
       with:
         path: deploy/system
-        name: system
+        name: ${{ steps.stage-artifacts.outputs.package-name }}-${{ github.sha }}
         if-no-files-found: error
     - name: Save deploy cache
       uses: actions/cache/save@v6

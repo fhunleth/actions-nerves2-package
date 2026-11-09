@@ -256,7 +256,7 @@ And you will need to set the following in the `./.actions/get-br-dependencies` a
           hex-validate: true
 ```
 
-The uploaded Actions artifact named `system` contains:
+The uploaded Actions artifact, `<package name>-<git commit hash>.zip` contains:
 
 ```text
 artifacts/       Selected package's archives and any configured sidecars
@@ -267,7 +267,7 @@ hex/package.tar Hex package, unless hex-validate is false
 
 These files are also cached for the deployment job in the same workflow run.
 The Hex package includes the generated manifest when
-`"checksum.exs"` is listed in the project's package files. Download the `system`
+`"checksum.exs"` is listed in the project's package files. Download the package's
 Actions artifact to retain the Hex package for publishing.
 
 The checksum task covers only archives in the active build plan and replaces

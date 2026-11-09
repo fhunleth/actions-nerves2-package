@@ -59,6 +59,23 @@ defmodule StageArtifactsTest do
     assert_raise File.CopyError, fn -> Stage.stage(package, context.destination) end
   end
 
+  test "exports the selected package's name for the Actions artifact", context do
+    filename = "test_system-portable-1.0.0-ABC123.tar.gz"
+    archive = Path.join(context.downloads, filename)
+    File.write!(archive, "archive")
+    output = Path.join(context.source, "github-output")
+    File.write!(output, "existing-output=value\n")
+
+    package = %{
+      app: :test_system,
+      path: context.source,
+      downloads: [%{archive_path: archive, filename: filename}]
+    }
+
+    assert :ok = Stage.stage(package, context.destination, output)
+    assert File.read!(output) == "existing-output=value\npackage-name=test_system\n"
+  end
+
   test "fails rather than exporting an empty package", context do
     package = %{app: :system, path: context.source, downloads: []}
 
