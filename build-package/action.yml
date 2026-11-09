@@ -34,6 +34,13 @@ runs:
         nerves-bootstrap-version: ${{ inputs.nerves-bootstrap-version }}
     - uses: ./.actions/.internal/restore-nerves-downloads
     - uses: ./.actions/.internal/mix-deps-get
+    - name: Clean artifact workspace and image
+      shell: bash
+      env:
+        NERVES_CONTAINER_TOOL: docker
+      run: |
+        bash "${GITHUB_ACTION_PATH}/run_logged.sh" artifact-clean \
+          script -e -c 'mix nerves.artifact.clean --image' -q /dev/null
     - name: Restore compiler cache
       if: inputs.enable-ccache == 'true'
       uses: actions/cache/restore@v6

@@ -289,20 +289,19 @@ ccache setup. Cache keys separate repositories, runner architectures, and
 `mix.lock`/`nerves_defconfig` configurations. Ccache also checks compiler and
 source inputs. Compiler caching is disabled by default.
 
+#### Clean builds
+
+Before each artifact build, `build-package` runs
+`mix nerves.artifact.clean --image` to clean the build workspace and remove the
+selected package's container image. This prevents reuse of an old artifact image
+restored by the runner. Docker can still reuse valid build layers and cached
+base images.
+
 #### Build logs and failures
 
-Only the lengthy artifact-build output is hidden from the workflow log.
-Checksum, artifact-staging, and Hex-packaging output is streamed to the
-workflow log as usual. All four commands also save their full output in the
-`nerves-package-logs` artifact, including after a failure or cancellation when
-the runner can still upload artifacts.
-
-Failed commands retain their exit status and show their last output on the
-run's summary page. Artifact-build failures also print that excerpt in the
-workflow log. Excerpts are limited to 100 lines and 16 KiB so a noisy build
-cannot hide a later packaging failure.
-
-Log artifacts contain raw command output; avoid printing secrets.
+Only the lengthy artifact-build output is hidden from the workflow log. See the
+`nerves-package-logs` artifact for full logs. Log artifacts contain raw command
+output; avoid printing secrets.
 
 ### deploy-package
 

@@ -34,7 +34,7 @@ defmodule RunLoggedTest do
   end
 
   test "streams short command output while retaining complete logs", context do
-    for step <- ["artifact-checksum", "artifact-staging", "hex-build"] do
+    for step <- ["artifact-clean", "artifact-checksum", "artifact-staging", "hex-build"] do
       {output, status} =
         run(context, step, [
           "bash",
@@ -112,20 +112,22 @@ defmodule RunLoggedTest do
              20000
   end
 
-  test "keeps the build terminal and exit status when capturing script output", context do
-    {output, status} =
-      run(context, "artifact-build", [
-        "script",
-        "-e",
-        "-c",
-        "test -t 0 && test -t 1 && exit 17",
-        "-q",
-        "/dev/null"
-      ])
+  test "keeps the container terminal and exit status when capturing script output", context do
+    for step <- ["artifact-clean", "artifact-build"] do
+      {output, status} =
+        run(context, step, [
+          "script",
+          "-e",
+          "-c",
+          "test -t 0 && test -t 1 && exit 17",
+          "-q",
+          "/dev/null"
+        ])
 
-    assert status == 17
-    assert output =~ "artifact-build failed with exit status 17"
-    assert File.read!(context.summary) =~ "**17**"
+      assert status == 17
+      assert output =~ "#{step} failed with exit status 17"
+      assert File.read!(context.summary) =~ "**17**"
+    end
   end
 
   defp run(context, step, command) do
