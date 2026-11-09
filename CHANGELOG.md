@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.4
+
+Changes:
+
+- Fix issue where created containers from previous builds were restored and
+  builds were incremental. This runs `mix nerves.artifact.clean --image` to fix
+  this when it happens.
+
 ## v0.1.3
 
 Changes:
