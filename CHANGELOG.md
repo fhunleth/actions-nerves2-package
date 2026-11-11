@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+## v0.1.5
+
+This release moves the repository to nerves-project/actions-nerves-package.
+Please update references.
+
+Changes:
+
+- Add opt-in `publish-to-hex` deployment to publish tagged GitHub releases to Hex.pm
+- Change file naming of build artifacts posted to the GHA artifacts list. Names
+  now have the repository and commit in their names.
+
 ## v0.1.4
 
 Changes:
