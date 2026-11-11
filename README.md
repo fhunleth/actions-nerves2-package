@@ -53,7 +53,8 @@ To migrate an existing workflow:
 9. Update any custom artifact-processing steps: the uploaded artifact
    now includes `artifacts/`, `checksum.exs`, `CHANGELOG.md`, and
    `hex/package.tar` (unless `hex-validate` is false). Draft releases include
-   the package archives and `checksum.exs`; Hex publishing remains separate.
+   the package archives and `checksum.exs`. Hex publishing is opt-in via
+   `deploy-package`'s `publish-to-hex` input.
 
 ## Example
 
@@ -268,7 +269,7 @@ hex/package.tar Hex package, unless hex-validate is false
 These files are also cached for the deployment job in the same workflow run.
 The Hex package includes the generated manifest when
 `"checksum.exs"` is listed in the project's package files. Download the package's
-Actions artifact to retain the Hex package for publishing.
+Actions artifact to retain the Hex package for manual publishing.
 
 The checksum task covers only archives in the active build plan and replaces
 the manifest. Packages with host-specific archives need an additional
@@ -333,6 +334,60 @@ The `./.actions/deploy-package` action should only be run after a job running th
 > * https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/using-github-cli-in-workflows
 > * https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/controlling-permissions-for-github_token
 
+#### Publishing to Hex
+
+Set `publish-to-hex: true` to publish the GitHub release at the end of deployment,
+then publish the Hex package and documentation. By default this input is `false`
+and the GitHub release remains a draft.
+
+```yaml
+  deploy-package:
+    needs: [build-package]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: nerves-project/actions-nerves2-package@v0
+      - name: Deploy and publish Nerves package
+        uses: ./.actions/deploy-package
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          publish-to-hex: true
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
+```
+
+All three version inputs are required when publishing. Use OTP 27 or later and
+versions compatible with the package. The action installs the latest Hex
+(workload identity requires Hex 2.6 or later), restores the build's `checksum.exs`
+into the checked-out project, and fetches dependencies. It then publishes the
+GitHub release, fetches the Nerves artifacts, and runs `mix hex.publish --yes`.
+This rebuilds the Hex package from the checked-out tag with the generated
+checksums and builds and publishes documentation, rather than uploading the
+saved `hex/package.tar`. It also works when `hex-validate` was disabled.
+GitHub artifacts must be public before documentation or consumers download them.
+If artifact fetching or Hex publishing fails, the GitHub release remains public.
+
+For keyless publishing, configure a [Hex workload identity](https://hex.pm/docs/workload-identity)
+for the package's GitHub repository, the **calling workflow filename** (for
+example `ci.yml`), and the GitHub environment (`release` above). Public
+repositories require an environment; configure protection rules as appropriate.
+The package must already exist on Hex; publish its first release manually.
+Do not set `HEX_API_KEY` or configure other Hex credentials in the job: credentials
+take precedence over workload identity. Hex uses the job's `id-token: write`
+permission to authenticate automatically.
+
+Enable [staged publishing](https://hex.pm/docs/publish#staged-publishing) in the
+package's Hex settings to hold the package and docs for manual approval. The job
+succeeds once Hex accepts the staged upload; it does not wait for approval or
+approve the release. Review and approve it with 2FA on hex.pm within seven days.
+Without staged publishing enabled, the Hex release is published immediately.
+
 ### Creating a release
 
 To create a release for your Nerves package:
@@ -346,13 +401,16 @@ To create a release for your Nerves package:
   - Push the commit and tag to the git remote (GitHub).
   - The `deploy-package` job will run when the tag is pushed. It will create a
     `v<VERSION>` draft release with the `CHANGELOG.md` notes and compiled Nerves
-    package artifacts and `checksum.exs`. Hex publishing remains a separate step.
-  - Review the draft release in GitHub, change the name, and publish the
-    release.
+    package artifacts and `checksum.exs`.
+  - By default, review the draft release in GitHub, change the name, and publish
+    the release. Hex publishing remains manual.
+  - With `publish-to-hex: true`, the action publishes the GitHub release and
+    uploads the package and docs to Hex automatically. If staged publishing is
+    enabled, review and approve the staged release on hex.pm.
 
 ## Testing
 
-Run the artifact-staging and command-logging tests with:
+Run the artifact-staging, command-logging, and publishing tests with:
 
 ```sh
 elixir -r 'test/*_test.exs' -e ''

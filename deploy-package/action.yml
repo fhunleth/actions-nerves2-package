@@ -1,5 +1,5 @@
 name: deploy-package
-description: Create a draft release with Nerves 2 package archives and their checksum manifest
+description: Release Nerves 2 package archives and optionally publish to Hex
 
 inputs:
   github-token:
@@ -12,10 +12,39 @@ inputs:
       * https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/using-github-cli-in-workflows
       * https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/controlling-permissions-for-github_token 
     required: true
+  publish-to-hex:
+    description: Publish the GitHub release, then publish the package and docs to Hex
+    required: false
+    default: 'false'
+  otp-version:
+    description: OTP version (27 or later); required when publish-to-hex is true
+    required: false
+  elixir-version:
+    description: Elixir version; required when publish-to-hex is true
+    required: false
+  nerves-bootstrap-version:
+    description: nerves_bootstrap version; required when publish-to-hex is true
+    required: false
 
 runs:
   using: composite
   steps:
+    - name: Validate Hex publishing configuration
+      if: inputs.publish-to-hex == 'true'
+      shell: bash
+      env:
+        OTP_VERSION: ${{ inputs.otp-version }}
+        ELIXIR_VERSION: ${{ inputs.elixir-version }}
+        NERVES_BOOTSTRAP_VERSION: ${{ inputs.nerves-bootstrap-version }}
+      run: |
+        if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
+          echo "::error::Hex publishing requires a tagged release"
+          exit 1
+        fi
+        if [[ -z "$OTP_VERSION" || -z "$ELIXIR_VERSION" || -z "$NERVES_BOOTSTRAP_VERSION" ]]; then
+          echo "::error::Hex publishing requires otp-version, elixir-version, and nerves-bootstrap-version"
+          exit 1
+        fi
     - name: Restore cache
       uses: actions/cache/restore@v6
       with:
@@ -35,3 +64,16 @@ runs:
         RELEASE_TAG: ${{ github.ref_name }}
       run: |
         gh release create "$RELEASE_TAG" deploy/system/artifacts/* deploy/system/checksum.exs --title "$RELEASE_TAG" -F deploy/system/RELEASE_NOTES --draft
+    - uses: ./.actions/.internal/setup-beam-nerves
+      if: inputs.publish-to-hex == 'true'
+      with:
+        otp-version: ${{ inputs.otp-version }}
+        elixir-version: ${{ inputs.elixir-version }}
+        nerves-bootstrap-version: ${{ inputs.nerves-bootstrap-version }}
+    - name: Publish to Hex
+      if: inputs.publish-to-hex == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        bash "${GITHUB_ACTION_PATH}/publish.sh"
