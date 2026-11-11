@@ -25,7 +25,9 @@ defmodule PublishTest do
       test -z "${MIX_OS_DEPS_COMPILE_PARTITION_COUNT+x}"
       printf '%s %s\\n' "#{command}" "$*" >> commands
       if [[ "#{command} $*" == "${FAIL_COMMAND:-}" ]]; then exit 42; fi
+      if [[ "#{command} $*" == "mix docs" ]]; then touch docs-ready; fi
       if [[ "#{command} $*" == "mix hex.publish --yes" ]]; then
+        test -f docs-ready
         test "$ACTIONS_ID_TOKEN_REQUEST_URL" = "https://example.invalid/oidc"
         test "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" = "oidc-test-token"
         echo "Package staged for approval"
@@ -50,6 +52,7 @@ defmodule PublishTest do
              "mix deps.get",
              "gh release edit v1.2.3 --draft=false",
              "mix nerves.artifact.get",
+             "mix docs",
              "mix hex.publish --yes"
            ]
 
@@ -73,17 +76,19 @@ defmodule PublishTest do
     assert commands(ctx) == []
   end
 
-  test "stops on preparation, GitHub release, artifact download, and Hex failures", ctx do
+  test "stops on preparation, GitHub release, artifact download, docs, and Hex failures", ctx do
     expected = [
       "mix local.hex --force",
       "mix deps.get",
       "gh release edit v1.2.3 --draft=false",
       "mix nerves.artifact.get",
+      "mix docs",
       "mix hex.publish --yes"
     ]
 
     for {command, index} <- Enum.with_index(expected, 1) do
       File.rm(Path.join(ctx.root, "commands"))
+      File.rm(Path.join(ctx.root, "docs-ready"))
       {_output, status} = run(ctx, [{"FAIL_COMMAND", command}])
 
       assert status == 42

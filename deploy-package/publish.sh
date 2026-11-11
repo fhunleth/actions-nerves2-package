@@ -15,4 +15,6 @@ mix deps.get
 # Documentation may fetch artifacts, which must be publicly downloadable first.
 gh release edit "$GITHUB_REF_NAME" --draft=false
 mix nerves.artifact.get
+# Finish Nerves compilation before Hex snapshots code paths for publishing docs.
+mix docs
 mix hex.publish --yes
