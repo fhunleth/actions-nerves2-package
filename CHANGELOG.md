@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## v0.1.6
+
+Changes:
+
+- Workaround Nerves loadpaths issue when publishing the hex package by
+  building docs separately. This was due to Hex's workload identity modules
+  being unloaded.
 
 ## v0.1.5
 
