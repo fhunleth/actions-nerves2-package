@@ -30,7 +30,7 @@ Changes:
 
 ## v0.1.0
 
-Initial release of `fhunleth/actions-nerves2-package`, a Nerves 2-only fork of
+Initial release of `nerves-project/actions-nerves2-package`, a Nerves 2-only fork of
 `gridpoint-com/actions-nerves-system`.
 
 - Add `build-package` to explicitly build Nerves package artifacts using Docker.

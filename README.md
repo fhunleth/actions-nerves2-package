@@ -1,4 +1,4 @@
-# fhunleth/actions-nerves2-package
+# nerves-project/actions-nerves2-package
 
 A collection of GitHub actions for building and deploying Nerves 2 packages.
 
@@ -32,7 +32,7 @@ To migrate an existing workflow:
 
    ```diff
    - uses: gridpoint-com/actions-nerves-system@v1
-   + uses: fhunleth/actions-nerves2-package@v0
+   + uses: nerves-project/actions-nerves2-package@v0
    ```
 
 3. Rename local action references from `./.actions/build-system` to
@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-package@v0
+      - uses: nerves-project/actions-nerves2-package@v0
       - name: Get Buildroot Dependencies
         uses: ./.actions/get-br-dependencies
         with:
@@ -95,7 +95,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-package@v0
+      - uses: nerves-project/actions-nerves2-package@v0
       - name: Build Nerves package
         uses: ./.actions/build-package
         with:
@@ -110,7 +110,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-package@v0
+      - uses: nerves-project/actions-nerves2-package@v0
       - name: Deploy Nerves package
         uses: ./.actions/deploy-package
         with:
@@ -126,13 +126,13 @@ to be used within the job.
 ```yaml
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-package@v0
+      - uses: nerves-project/actions-nerves2-package@v0
 ```
 
 ### get-br-dependencies
 
 ```yaml
-      - uses: fhunleth/actions-nerves2-package@v0
+      - uses: nerves-project/actions-nerves2-package@v0
       - name: Get Buildroot Dependencies
         uses: ./.actions/get-br-dependencies
         with:
@@ -241,7 +241,7 @@ And you will need to set the following in the `./.actions/get-br-dependencies` a
 ### build-package
 
 ```yaml
-      - uses: fhunleth/actions-nerves2-package@v0
+      - uses: nerves-project/actions-nerves2-package@v0
       - name: Build Nerves package
         uses: ./.actions/build-package
         with:
@@ -316,7 +316,7 @@ The `./.actions/deploy-package` action should only be run after a job running th
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: fhunleth/actions-nerves2-package@v0
+      - uses: nerves-project/actions-nerves2-package@v0
       - name: Deploy Nerves package
         uses: ./.actions/deploy-package
         with:
